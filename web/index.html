@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wake on LAN</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Wake on LAN">
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; color: #20252c; background: #f5f6f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: 20px 20px 64px; }
+    main { max-width: 420px; margin: auto; }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    h1 { font-size: 20px; font-weight: 600; line-height: 1.1; text-align: left; margin: 0; letter-spacing: -.4px; }
+    .logo { width: 36.4px; height: 36.4px; flex-shrink: 0; }
+    .brand-meta { margin: 0; color: #87909b; font-size: 12px; line-height: 1.2; }
+    .brand-meta a { color: inherit; text-decoration: none; }
+    .brand-meta a:hover { color: #2864cf; text-decoration: underline; }
+    .panel { background: #fff; border: 1px solid #e4e7eb; border-radius: 20px; padding: 48px 32px 32px; box-shadow: 0 6px 24px #172b4d05; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .power { display: flex; align-items: center; justify-content: center; width: min(168px, 100%); aspect-ratio: 1; padding: 0; border-radius: 50%; margin: 0 auto; color: #fff; background: #2864cf; border: 1px solid #245bbb; box-shadow: 0 5px 14px #2864cf24; transition: background .15s, transform .15s; }
+    .power:hover { background: #2158ba; }
+    .power:active { transform: scale(.96); }
+    .power:disabled { opacity: .6; cursor: wait; }
+    .power svg { width: 56%; height: auto; aspect-ratio: 1; }
+    .power { position: relative; overflow: hidden; isolation: isolate; }
+    .power svg { position: relative; z-index: 1; pointer-events: none; }
+    .ripple { position: absolute; border-radius: 50%; background: rgb(255 255 255 / 30%); pointer-events: none; transform: scale(0); animation: ripple-expand 600ms ease-out forwards; }
+    @keyframes ripple-expand { to { transform: scale(1); opacity: 0; } }
+    :focus-visible { outline: 3px solid #8cb5ff; outline-offset: 4px; }
+    #status { min-height: 21px; margin: 12px 0 8px; text-align: center; font-size: 13px; line-height: 21px; color: #657080; overflow-wrap: anywhere; }
+    #status[data-kind="error"] { color: #b42318; }
+    #status[data-kind="success"] { color: #237046; }
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 9px; }
+    label span { color: #87909b; font-weight: 400; margin-left: 6px; font-size: 12px; }
+    .field + .field { margin-top: 20px; }
+    input { width: 100%; border: 1px solid #dce1e7; background: #fff; border-radius: 9px; padding: 12px; font-size: 14px; color: #20252c; }
+    input::placeholder { color: #a1a9b3; }
+    input:focus { border-color: #2864cf; outline: 3px solid #2864cf15; }
+    .hint { font-size: 12px; line-height: 1.7; color: #87909b; margin: 16px 0 0; }
+    .history { margin-top: 28px; }
+    h2 { font-size: 13px; font-weight: 500; color: #657080; margin: 0 0 12px 2px; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; align-items: center; border: 1px solid #e4e7eb; border-radius: 11px; background: #fff; margin-top: 8px; }
+    .recall { text-align: left; flex: 1; min-width: 0; padding: 14px 16px; border: 0; background: transparent; border-radius: 10px; }
+    li:hover { background: #f8f9fb; }
+    .mac { display: block; font: 13px ui-monospace, Consolas, monospace; color: #303944; }
+    .detail { display: block; font-size: 11px; margin-top: 6px; color: #87909b; overflow-wrap: anywhere; }
+    .delete { display: grid; place-items: center; width: 36px; height: 36px; margin-right: 10px; border: 0; border-radius: 7px; color: #89929e; background: transparent; }
+    .delete:hover { color: #b42318; background: #fff1f0; }
+    .delete svg { width: 16px; height: 16px; }
+    .empty { font-size: 13px; color: #969eaa; text-align: center; padding: 18px; }
+    @media(prefers-reduced-motion: reduce) { .power { transition: none; } }
+    @media(prefers-reduced-motion: reduce) { .ripple { display: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <header class="brand">
+    <img class="logo" src="/favicon.svg" alt="" width="36" height="36">
+    <div>
+      <h1>Wake on LAN</h1>
+      <p class="brand-meta"><a href="https://github.com/ChrisKimZHT/wol-power-button" target="_blank" rel="noopener noreferrer">wol-power-button</a> <span>{{VERSION}}</span></p>
+    </div>
+  </header>
+  <form class="panel" id="wake-form">
+    <button class="power" id="power" type="submit" aria-label="Wake device" title="Wake device">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M24 6v18M13 12a17 17 0 1 0 22 0"/></svg>
+    </button>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div class="field"><label for="mac">MAC address</label><input id="mac" name="mac" placeholder="AA:BB:CC:DD:EE:FF" required maxlength="17" autocomplete="off" spellcheck="false" autocapitalize="characters"></div>
+    <div class="field"><label for="ip">IP address<span>Optional</span></label><input id="ip" name="ip" placeholder="192.168.1.100" maxlength="15" inputmode="decimal" autocomplete="off"></div>
+    <div class="field"><label for="mask">Subnet mask<span>Optional</span></label><input id="mask" name="mask" placeholder="255.255.255.0" maxlength="15" inputmode="decimal" autocomplete="off"></div>
+    <p class="hint">Leave blank for local broadcast.</p>
+  </form>
+  <section class="history" aria-labelledby="history-title"><h2 id="history-title">History</h2><ul id="history-list"></ul><p class="empty" id="empty">No saved devices</p></section>
+</main>
+<script>
+  const key = 'wol-history-v1';
+  const form = document.querySelector('#wake-form');
+  const fields = ['mac', 'ip', 'mask'].map(id => document.getElementById(id));
+  const [mac, ip, mask] = fields;
+  const status = document.querySelector('#status');
+  const power = document.querySelector('#power');
+  power.addEventListener('click', event => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rect = power.getBoundingClientRect();
+    const x = event.detail === 0 ? rect.width / 2 : event.clientX - rect.left;
+    const y = event.detail === 0 ? rect.height / 2 : event.clientY - rect.top;
+    const diameter = Math.hypot(Math.max(x, rect.width - x), Math.max(y, rect.height - y)) * 2;
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.setAttribute('aria-hidden', 'true');
+    ripple.style.width = ripple.style.height = diameter + 'px';
+    ripple.style.left = x - diameter / 2 + 'px';
+    ripple.style.top = y - diameter / 2 + 'px';
+    power.append(ripple);
+    setTimeout(() => ripple.remove(), 650);
+  });
+  let history = [];
+  function message(text, kind = '') { status.textContent = text; status.dataset.kind = kind; }
+  function normalizeMAC(value) {
+    const clean = value.trim().replace(/[:-]/g, '');
+    return /^[\da-f]{12}$/i.test(clean) ? clean.toUpperCase().match(/.{2}/g).join(':') : null;
+  }
+  function ipv4(value) { return /^(\d{1,3}\.){3}\d{1,3}$/.test(value) && value.split('.').every(v => Number(v) <= 255 && (v.length === 1 || v[0] !== '0')); }
+  function validMask(value) {
+    if (!ipv4(value)) return false;
+    const bits = value.split('.').map(v => Number(v).toString(2).padStart(8, '0')).join('');
+    return /^1{0,30}0{2,32}$/.test(bits);
+  }
+  function readFields() {
+    return { mac: normalizeMAC(mac.value), ip: ip.value.trim(), mask: mask.value.trim() };
+  }
+  function isValid(item) { return item.mac && (!item.ip || ipv4(item.ip)) && (!item.mask || (item.ip && validMask(item.mask))); }
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+    if (Array.isArray(stored)) {
+      for (const item of stored) {
+        if (!item || typeof item.mac !== 'string' || typeof item.ip !== 'string' || typeof item.mask !== 'string') continue;
+        const entry = { mac: normalizeMAC(item.mac), ip: item.ip, mask: item.mask };
+        if (isValid(entry) && !history.some(h => h.mac === entry.mac)) history.push(entry);
+        if (history.length === 100) break;
+      }
+    }
+  } catch { message('Unable to read local history', 'error'); }
+  function persist() {
+    try { localStorage.setItem(key, JSON.stringify(history)); return true; }
+    catch { message('Unable to save history in this browser', 'error'); return false; }
+  }
+  function save(item) {
+    history = [item, ...history.filter(h => h.mac !== item.mac)].slice(0, 100);
+    const saved = persist(); render(); return saved;
+  }
+  function render() {
+    const list = document.querySelector('#history-list'); list.replaceChildren();
+    document.querySelector('#empty').hidden = history.length > 0;
+    for (const item of history) {
+      const row = document.createElement('li');
+      const recall = document.createElement('button'); recall.type = 'button'; recall.className = 'recall'; recall.title = 'Use this device';
+      const title = document.createElement('span'); title.className = 'mac'; title.textContent = item.mac;
+      const detail = document.createElement('span'); detail.className = 'detail'; detail.textContent = item.ip ? item.ip + (item.mask ? ' / ' + item.mask : '') : 'Local broadcast';
+      recall.append(title, detail);
+      recall.onclick = () => { mac.value = item.mac; ip.value = item.ip; mask.value = item.mask; fields.forEach(f => f.setCustomValidity('')); message('Device loaded'); };
+      const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'delete'; remove.setAttribute('aria-label', 'Delete ' + item.mac); remove.title = 'Delete record';
+      remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg>';
+      remove.onclick = () => { history = history.filter(h => h.mac !== item.mac); const saved = persist(); render(); if (saved) message('Record deleted'); };
+      row.append(recall, remove); list.append(row);
+    }
+  }
+  fields.forEach(field => {
+    field.addEventListener('input', () => fields.forEach(f => f.setCustomValidity('')));
+  });
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (power.disabled) return;
+    const item = readFields();
+    mac.setCustomValidity(item.mac ? '' : 'Enter a valid MAC address');
+    ip.setCustomValidity(!item.ip || ipv4(item.ip) ? '' : 'Enter a valid IPv4 address');
+    mask.setCustomValidity(!item.mask ? '' : !item.ip ? 'An IP address is required when specifying a subnet mask' : validMask(item.mask) ? '' : 'Enter a contiguous subnet mask with a prefix length of 0-30');
+    if (!form.reportValidity()) return;
+    mac.value = item.mac;
+    power.disabled = true; power.setAttribute('aria-busy', 'true'); message('Sending...');
+    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch('/api/wake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item), signal: controller.signal });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Failed to send packet');
+      const saved = save(item);
+      message(result.message + (saved ? '' : ', but history could not be saved'), saved ? 'success' : 'error');
+    } catch (error) { message(error.name === 'AbortError' ? 'Request timed out. Check your connection and try again' : error instanceof TypeError ? 'Connection failed. Check your network and try again' : error.message, 'error'); }
+    finally { clearTimeout(timer); power.disabled = false; power.removeAttribute('aria-busy'); }
+  });
+  if (history.length > 0) {
+    const latest = history[0];
+    mac.value = latest.mac;
+    ip.value = latest.ip;
+    mask.value = latest.mask;
+  }
+  render();
+</script>
+</body>
+</html>
