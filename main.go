@@ -120,8 +120,9 @@ func wakeHandler(send func([]byte, net.IP) error) http.HandlerFunc {
 			reply(400, err.Error())
 			return
 		}
+		log.Printf("Sending wake packet: mac=%s destination=%s:9 bytes=%d", req.MAC, ip, len(packet))
 		if err := send(packet, ip); err != nil {
-			log.Printf("Failed to send wake packet: %v", err)
+			log.Printf("Failed to send wake packet: mac=%s destination=%s:9 error=%v", req.MAC, ip, err)
 			reply(500, "Failed to send packet. Check the server network and try again")
 			return
 		}
