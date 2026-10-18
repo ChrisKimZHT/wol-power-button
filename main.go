@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -129,7 +130,11 @@ func wakeHandler(send func([]byte, net.IP) error) http.HandlerFunc {
 }
 
 func main() {
-	listen := flag.String("listen", ":8080", "HTTP listen address")
+	port := os.Getenv("WEB_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	listen := flag.String("listen", ":"+port, "HTTP listen address (defaults to :WEB_PORT, or :8080 if WEB_PORT is unset)")
 	flag.Parse()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/wake", wakeHandler(sendPacket))

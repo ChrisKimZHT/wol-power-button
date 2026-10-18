@@ -7,5 +7,6 @@ docker run -d \
   --name wol-power-button \
   --restart unless-stopped \
   --network host \
+  -e WEB_PORT=8080 \
   chriskimzht/wol-power-button:0
 ```
